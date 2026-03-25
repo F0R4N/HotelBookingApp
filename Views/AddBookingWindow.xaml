@@ -1,0 +1,33 @@
+﻿<Window x:Class="HotelBookingApp.Views.AddBookingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Создание / Редактирование заявки" Height="500" Width="400"
+        WindowStartupLocation="CenterScreen">
+
+    <StackPanel Margin="10">
+
+        <TextBlock Text="Пользователь"/>
+        <ComboBox x:Name="UsersBox" DisplayMemberPath="FullName" SelectedValuePath="Id"/>
+
+        <TextBlock Text="Номер" Margin="0,10,0,0"/>
+        <ComboBox x:Name="RoomsBox" DisplayMemberPath="Name" SelectedValuePath="Id"/>
+
+        <TextBlock Text="Дата начала" Margin="0,10,0,0"/>
+        <DatePicker x:Name="StartDatePicker"/>
+
+        <TextBlock Text="Дата окончания" Margin="0,10,0,0"/>
+        <DatePicker x:Name="EndDatePicker"/>
+
+        <TextBlock Text="Комментарий" Margin="0,10,0,0"/>
+        <TextBox x:Name="CommentBox" Height="60" AcceptsReturn="True"/>
+
+        <TextBlock Text="Статус" Margin="0,10,0,0"/>
+        <ComboBox x:Name="StatusBox" SelectedValuePath="Tag">
+            <ComboBoxItem Content="Pending" Tag="1"/>
+            <ComboBoxItem Content="Approved" Tag="2"/>
+            <ComboBoxItem Content="Rejected" Tag="3"/>
+        </ComboBox>
+
+        <Button Content="Сохранить" Margin="0,15,0,0" Click="Save_Click"/>
+    </StackPanel>
+</Window>

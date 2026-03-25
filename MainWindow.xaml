@@ -1,0 +1,42 @@
+﻿<Window x:Class="HotelBookingApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:HotelBookingApp"
+        mc:Ignorable="d"
+        Title="Список заявок" Height="450" Width="900"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Button Content="Создать заявку" Click="OpenAddBooking" Margin="0,0,0,10" Grid.Row="0"/>
+
+        <DataGrid x:Name="BookingsGrid" AutoGenerateColumns="False" Grid.Row="1" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="Auto"/>
+                <DataGridTextColumn Header="Пользователь" Binding="{Binding UserName}" Width="*"/>
+                <DataGridTextColumn Header="Номер" Binding="{Binding RoomName}" Width="*"/>
+                <DataGridTextColumn Header="Дата начала" Binding="{Binding StartDate}" Width="*"/>
+                <DataGridTextColumn Header="Дата окончания" Binding="{Binding EndDate}" Width="*"/>
+                <DataGridTextColumn Header="Комментарий" Binding="{Binding Comment}" Width="2*"/>
+                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
+
+                <DataGridTemplateColumn Header="Действия" Width="150">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="Редактировать" Margin="2" Click="EditBooking_Click"/>
+                                <Button Content="Удалить" Margin="2" Click="DeleteBooking_Click"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
