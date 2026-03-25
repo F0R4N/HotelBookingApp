@@ -1,29 +1,30 @@
-﻿using System;
+﻿using HotelBookingApp.Data;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
-using System.Windows.Controls;
-using HotelBookingApp.Data;
 
 namespace HotelBookingApp.Views
 {
     public partial class AddBookingWindow : Window
     {
         Db db = new Db();
-        private int? _bookingId = null;
+        private int? editingBookingId = null; // для редактирования
 
+        // Конструктор для создания новой заявки
         public AddBookingWindow()
         {
             InitializeComponent();
             LoadUsers();
             LoadRooms();
-            StatusBox.SelectedIndex = 0; // по умолчанию Pending
+            LoadStatuses();
         }
 
+        // Конструктор для редактирования существующей заявки
         public AddBookingWindow(int bookingId) : this()
         {
-            _bookingId = bookingId;
-            LoadBookingData();
+            editingBookingId = bookingId;
+            LoadBooking(bookingId);
         }
 
         private void LoadUsers()
@@ -31,7 +32,7 @@ namespace HotelBookingApp.Views
             using (SqlConnection conn = db.GetConnection())
             {
                 conn.Open();
-                SqlDataAdapter adapter = new SqlDataAdapter("SELECT Id, FullName FROM Users ORDER BY FullName", conn);
+                SqlDataAdapter adapter = new SqlDataAdapter("SELECT Id, FullName FROM Users", conn);
                 DataTable table = new DataTable();
                 adapter.Fill(table);
                 UsersBox.ItemsSource = table.DefaultView;
@@ -43,103 +44,97 @@ namespace HotelBookingApp.Views
             using (SqlConnection conn = db.GetConnection())
             {
                 conn.Open();
-                SqlDataAdapter adapter = new SqlDataAdapter("SELECT Id, Name FROM Rooms ORDER BY Name", conn);
+                SqlDataAdapter adapter = new SqlDataAdapter("SELECT Id, Name FROM Rooms", conn);
                 DataTable table = new DataTable();
                 adapter.Fill(table);
                 RoomsBox.ItemsSource = table.DefaultView;
             }
         }
 
-        private void LoadBookingData()
+        private void LoadStatuses()
         {
-            if (_bookingId == null) return;
-
             using (SqlConnection conn = db.GetConnection())
             {
                 conn.Open();
-                SqlCommand cmd = new SqlCommand(@"SELECT UserId, RoomId, StartDate, EndDate, Comment, StatusId
-                                                 FROM Bookings WHERE Id=@id", conn);
-                cmd.Parameters.AddWithValue("@id", _bookingId.Value);
+                DataTable table = new DataTable();
+                table.Columns.Add("Id", typeof(int));
+                table.Columns.Add("Name", typeof(string));
+
+                // Маппинг английских статусов на русские
+                table.Rows.Add(1, "Ожидает");
+                table.Rows.Add(2, "Подтверждено");
+                table.Rows.Add(3, "Отклонено");
+
+                StatusBox.ItemsSource = table.DefaultView;
+                StatusBox.SelectedValue = 1; 
+            }
+        }
+
+        private void LoadBooking(int bookingId)
+        {
+            using (SqlConnection conn = db.GetConnection())
+            {
+                conn.Open();
+                string query = "SELECT * FROM Bookings WHERE Id = @id";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@id", bookingId);
+
                 SqlDataReader reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
-                    UsersBox.SelectedValue = reader["UserId"];
-                    RoomsBox.SelectedValue = reader["RoomId"];
-                    StartDatePicker.SelectedDate = Convert.ToDateTime(reader["StartDate"]);
-                    EndDatePicker.SelectedDate = Convert.ToDateTime(reader["EndDate"]);
+                    UsersBox.SelectedValue = reader.GetInt32(reader.GetOrdinal("UserId"));
+                    RoomsBox.SelectedValue = reader.GetInt32(reader.GetOrdinal("RoomId"));
+                    StatusBox.SelectedValue = reader.GetInt32(reader.GetOrdinal("StatusId"));
+                    StartDatePicker.SelectedDate = reader.GetDateTime(reader.GetOrdinal("StartDate"));
+                    EndDatePicker.SelectedDate = reader.GetDateTime(reader.GetOrdinal("EndDate"));
                     CommentBox.Text = reader["Comment"].ToString();
-
-                    int statusId = Convert.ToInt32(reader["StatusId"]);
-                    foreach (ComboBoxItem item in StatusBox.Items)
-                    {
-                        if (Convert.ToInt32(item.Tag) == statusId)
-                        {
-                            StatusBox.SelectedItem = item;
-                            break;
-                        }
-                    }
                 }
             }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            if (UsersBox.SelectedValue == null || RoomsBox.SelectedValue == null)
+            if (UsersBox.SelectedValue == null || RoomsBox.SelectedValue == null || StatusBox.SelectedValue == null)
             {
-                MessageBox.Show("Выберите пользователя и номер", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите пользователя, номер и статус");
                 return;
             }
-
-            if (StartDatePicker.SelectedDate == null || EndDatePicker.SelectedDate == null)
-            {
-                MessageBox.Show("Выберите даты", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (EndDatePicker.SelectedDate < StartDatePicker.SelectedDate)
-            {
-                MessageBox.Show("Дата окончания не может быть раньше даты начала", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            int statusId = StatusBox.SelectedValue != null ? (int)StatusBox.SelectedValue : 1;
 
             using (SqlConnection conn = db.GetConnection())
             {
                 conn.Open();
-                SqlCommand cmd;
+                string query;
 
-                if (_bookingId == null)
+                if (editingBookingId.HasValue)
                 {
-                    cmd = new SqlCommand(@"INSERT INTO Bookings 
-                        (UserId, RoomId, StatusId, StartDate, EndDate, Comment)
-                        VALUES (@user, @room, @status, @start, @end, @comment)", conn);
+                    // Обновление существующей заявки
+                    query = @"UPDATE Bookings 
+                              SET UserId=@user, RoomId=@room, StatusId=@status, StartDate=@start, EndDate=@end, Comment=@comment
+                              WHERE Id=@id";
                 }
                 else
                 {
-                    cmd = new SqlCommand(@"UPDATE Bookings
-                        SET UserId=@user, RoomId=@room, StatusId=@status, StartDate=@start, EndDate=@end, Comment=@comment
-                        WHERE Id=@id", conn);
-                    cmd.Parameters.AddWithValue("@id", _bookingId.Value);
+                    // Создание новой заявки
+                    query = @"INSERT INTO Bookings 
+                              (UserId, RoomId, StatusId, StartDate, EndDate, Comment)
+                              VALUES (@user, @room, @status, @start, @end, @comment)";
                 }
 
-                cmd.Parameters.AddWithValue("@user", UsersBox.SelectedValue);
-                cmd.Parameters.AddWithValue("@room", RoomsBox.SelectedValue);
-                cmd.Parameters.AddWithValue("@status", statusId);
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@user", Convert.ToInt32(UsersBox.SelectedValue));
+                cmd.Parameters.AddWithValue("@room", Convert.ToInt32(RoomsBox.SelectedValue));
+                cmd.Parameters.AddWithValue("@status", Convert.ToInt32(StatusBox.SelectedValue));
                 cmd.Parameters.AddWithValue("@start", StartDatePicker.SelectedDate);
                 cmd.Parameters.AddWithValue("@end", EndDatePicker.SelectedDate);
                 cmd.Parameters.AddWithValue("@comment", CommentBox.Text);
 
+                if (editingBookingId.HasValue)
+                    cmd.Parameters.AddWithValue("@id", editingBookingId.Value);
+
                 cmd.ExecuteNonQuery();
             }
 
-            MessageBox.Show("Сохранено", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            if (Owner is MainWindow main)
-            {
-                main.LoadBookings();
-            }
-
+            MessageBox.Show(editingBookingId.HasValue ? "Заявка обновлена" : "Заявка создана");
             this.Close();
         }
     }

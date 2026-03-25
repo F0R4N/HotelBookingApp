@@ -14,8 +14,17 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Button Content="Создать заявку" Click="OpenAddBooking" Margin="0,0,0,10" Grid.Row="0"/>
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
+                <!-- пробел -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
+            <Button Content="Создать заявку" Click="OpenAddBooking" Width="120" Height="30" Grid.Column="0"/>
+            <Button Content="Каталог номеров" Click="OpenRoomCatalog" Width="120" Height="30" Grid.Column="2"/>
+        </Grid>
         <DataGrid x:Name="BookingsGrid" AutoGenerateColumns="False" Grid.Row="1" IsReadOnly="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="Auto"/>
